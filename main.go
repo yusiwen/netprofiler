@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -54,19 +55,19 @@ var profilers = []P.Profiler{
 		Name: "docker",
 		Files: []string{
 			"/etc/systemd/system/docker.service.d/proxy.conf",
-			"$HOME/.docker/config.json",
+			os.ExpandEnv("$HOME/.docker/config.json"),
 		},
 	},
 	&P.FileProfiler{
 		Name:  "git",
-		Files: []string{"$HOME/.gitconfig"},
+		Files: []string{os.ExpandEnv("$HOME/.gitconfig")},
 	},
 }
 
 func save(profile string) error {
 	log.Printf("Saving to profile '%s'\n", profile)
 	for _, p := range profilers {
-		err := p.Save(profile, "$HOME/.config/netprofiles")
+		err := p.Save(profile, os.ExpandEnv("$HOME/.config/netprofiles"))
 		if err != nil {
 			return err
 		}
@@ -77,7 +78,7 @@ func save(profile string) error {
 func load(profile string) error {
 	log.Printf("Loading profile '%s'\n", profile)
 	for _, p := range profilers {
-		err := p.Load(profile, "$HOME/.config/netprofiles")
+		err := p.Load(profile, os.ExpandEnv("$HOME/.config/netprofiles"))
 		if err != nil {
 			return err
 		}
@@ -86,6 +87,17 @@ func load(profile string) error {
 }
 
 func list() error {
+	files, err := ioutil.ReadDir(os.ExpandEnv("$HOME/.config/netprofiles"))
+
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	for _, f := range files {
+		fmt.Println(f.Name())
+	}
+
 	return nil
 }
 
@@ -102,7 +114,7 @@ func main() {
 				Action: func(c *R.Context) error {
 					profile := c.Args().First()
 					if len(profile) == 0 {
-						return errors.New("Profile name must not be null")
+						return errors.New("profile name must not be null")
 					}
 					return save(profile)
 				},
@@ -114,7 +126,7 @@ func main() {
 				Action: func(c *R.Context) error {
 					profile := c.Args().First()
 					if len(profile) == 0 {
-						return errors.New("Profile name must not be null")
+						return errors.New("profile name must not be null")
 					}
 					return load(profile)
 				},
@@ -124,7 +136,6 @@ func main() {
 				Aliases: []string{"l"},
 				Usage:   "list all profiles",
 				Action: func(c *R.Context) error {
-					fmt.Println("added task: ", c.Args().First())
 					return list()
 				},
 			},
