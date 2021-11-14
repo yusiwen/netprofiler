@@ -14,7 +14,7 @@ PLATFORM_LIST = \
 WINDOWS_ARCH_LIST = \
 	windows-amd64
 
-all: linux-amd64 linux-armv8 darwin-amd64 windows-amd64 # Most used
+all: linux-amd64 linux-armv8 darwin-amd64 # Most used
 
 docker:
 	$(GOBUILD) -o $(BINDIR)/$(NAME)-$@
@@ -92,8 +92,8 @@ $(gz_releases): %.gz : %
 $(zip_releases): %.zip : %
 	zip -m -j $(BINDIR)/$(NAME)-$(basename $@)-$(VERSION).zip $(BINDIR)/$(NAME)-$(basename $@).exe
 
-all-arch: $(PLATFORM_LIST) $(WINDOWS_ARCH_LIST)
+all-arch: $(PLATFORM_LIST)
 
-releases: $(gz_releases) $(zip_releases)
+releases: $(gz_releases)
 clean:
 	rm $(BINDIR)/*
