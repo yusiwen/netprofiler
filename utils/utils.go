@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -41,12 +40,7 @@ func CopySymLink(source, dest string) error {
 
 func CopySudo(src, dst string) error {
 	cmd := exec.Command("sudo", "cp", "-v", src, dst)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	fmt.Println(out.String())
-
-	return err
+	return cmd.Run()
 }
 
 func Copy(src, dst string) (int64, error) {

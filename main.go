@@ -53,6 +53,22 @@ var profilers = []P.Profiler{
 			{Path: "/etc/systemd/system/docker.service.d/proxy.conf", RootPrivilege: true},
 			{Path: os.ExpandEnv("$HOME/.docker/config.json"), RootPrivilege: false},
 		},
+		PostLoad: func() error {
+			log.Println("Running 'systemctl daemon-reload'")
+			_, err := exec.Command("sudo", "systemctl", "daemon-reload").Output()
+			if err != nil {
+				log.Fatalf("'systemctl daemon-reload' failed: %v", err)
+				return err
+			}
+
+			log.Println("Running 'systemctl restart docker'")
+			_, err = exec.Command("sudo", "systemctl", "restart", "docker").Output()
+			if err != nil {
+				log.Fatal(err)
+				return err
+			}
+			return nil
+		},
 	},
 	&P.FileProfiler{
 		Name:  "git",
