@@ -10,9 +10,14 @@ import (
 
 type PostLoadFunc func() error
 
+type File struct {
+	Path          string
+	RootPrivilege bool
+}
+
 type FileProfiler struct {
 	Name     string
-	Files    []string
+	Files    []File
 	PostLoad PostLoadFunc
 }
 
@@ -20,12 +25,12 @@ func (fp *FileProfiler) Save(profile, location string) error {
 	for _, f := range fp.Files {
 		dstPath := filepath.Join(location, profile, fp.Name)
 		os.MkdirAll(dstPath, os.ModePerm)
-		dst := filepath.Join(dstPath, filepath.Base(f))
-		_, err := utils.Copy(f, dst)
+		dst := filepath.Join(dstPath, filepath.Base(f.Path))
+		_, err := utils.Copy(f.Path, dst)
 		if err != nil {
 			return err
 		}
-		log.Printf("save '%s' to '%s'\n", f, dst)
+		log.Printf("save '%s' to '%s'\n", f.Path, dst)
 	}
 	return nil
 }
@@ -33,11 +38,17 @@ func (fp *FileProfiler) Save(profile, location string) error {
 func (fp *FileProfiler) Load(profile, location string) error {
 	for _, f := range fp.Files {
 		srcPath := filepath.Join(location, profile, fp.Name)
-		src := filepath.Join(srcPath, filepath.Base(f))
-		err := utils.Move(src, f)
+		src := filepath.Join(srcPath, filepath.Base(f.Path))
+		var err error
+		if f.RootPrivilege {
+			err = utils.CopySudo(src, f.Path)
+		} else {
+			_, err = utils.Copy(src, f.Path)
+		}
 		if err != nil {
 			return err
 		}
+		log.Printf("load '%s' to '%s'\n", src, f.Path)
 	}
 	if fp.PostLoad != nil {
 		err := fp.PostLoad()
