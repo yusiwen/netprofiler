@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -76,6 +77,21 @@ var profilers = []P.Profiler{
 	},
 }
 
+func getCurrentProfile() string {
+	file, err := os.Open(filepath.Join(os.ExpandEnv(default_location), ".current"))
+	if err != nil {
+		log.Printf("failed to get current profile: %v\n", err)
+	}
+	defer file.Close()
+
+	bytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Printf("failed to get current profile: %v\n", err)
+		return ""
+	}
+	return string(bytes)
+}
+
 func save(profile string) error {
 	for _, p := range profilers {
 		err := p.Save(profile, os.ExpandEnv(default_location))
@@ -95,11 +111,23 @@ func load(profile string) error {
 		}
 	}
 	fmt.Printf("Profile '%s' loaded\n", profile)
+	file, err := os.Create(filepath.Join(os.ExpandEnv(default_location), ".current"))
+	if err != nil {
+		log.Printf("save current profile failed: %v\n", err)
+		return nil
+	}
+
+	defer file.Close()
+	w := bufio.NewWriter(file)
+	w.WriteString(profile)
+	w.Flush()
+
 	return nil
 }
 
 func list() error {
 	files, err := ioutil.ReadDir(os.ExpandEnv(default_location))
+	currentProfile := getCurrentProfile()
 
 	if err != nil {
 		log.Fatal(err)
@@ -107,7 +135,13 @@ func list() error {
 	}
 
 	for _, f := range files {
-		fmt.Println(f.Name())
+		if f.IsDir() {
+			if f.Name() == currentProfile {
+				fmt.Println(">> " + f.Name())
+			} else {
+				fmt.Println(f.Name())
+			}
+		}
 	}
 
 	return nil
@@ -219,7 +253,8 @@ func main() {
 					return delete(profile)
 				},
 			},
-		}}
+		},
+	}
 
 	err := app.Run(os.Args)
 	if err != nil {
