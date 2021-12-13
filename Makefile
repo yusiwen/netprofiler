@@ -74,6 +74,7 @@ windows-386:
 	GOARCH=386 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-amd64:
+	rsrc -manifest netprofiler.exe.manifest -o netprofiler.syso
 	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BINDIR)/$(NAME)-$@.exe
 
 windows-arm64:
