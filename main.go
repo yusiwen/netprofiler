@@ -17,7 +17,7 @@ import (
 	R "github.com/urfave/cli/v2"
 )
 
-var default_location string = "$HOME/.config/netprofiles"
+var defaultLocation string = "$HOME/.config/netprofiles"
 
 var profilers = []P.Profiler{
 	&P.FileProfiler{
@@ -78,11 +78,16 @@ var profilers = []P.Profiler{
 }
 
 func getCurrentProfile() string {
-	file, err := os.Open(filepath.Join(os.ExpandEnv(default_location), ".current"))
+	file, err := os.Open(filepath.Join(os.ExpandEnv(defaultLocation), ".current"))
 	if err != nil {
 		log.Printf("failed to get current profile: %v\n", err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Printf("warning: file close error: %v\n", err)
+		}
+	}(file)
 
 	bytes, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -94,7 +99,7 @@ func getCurrentProfile() string {
 
 func save(profile string) error {
 	for _, p := range profilers {
-		err := p.Save(profile, os.ExpandEnv(default_location))
+		err := p.Save(profile, os.ExpandEnv(defaultLocation))
 		if err != nil {
 			return err
 		}
@@ -105,28 +110,42 @@ func save(profile string) error {
 
 func load(profile string) error {
 	for _, p := range profilers {
-		err := p.Load(profile, os.ExpandEnv(default_location))
+		err := p.Load(profile, os.ExpandEnv(defaultLocation))
 		if err != nil {
 			return err
 		}
 	}
 	fmt.Printf("Profile '%s' loaded\n", profile)
-	file, err := os.Create(filepath.Join(os.ExpandEnv(default_location), ".current"))
+	file, err := os.Create(filepath.Join(os.ExpandEnv(defaultLocation), ".current"))
 	if err != nil {
 		log.Printf("save current profile failed: %v\n", err)
 		return nil
 	}
 
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Printf("warning: file close error: %v\n", err)
+		}
+	}(file)
 	w := bufio.NewWriter(file)
-	w.WriteString(profile)
-	w.Flush()
+	_, err = w.WriteString(profile)
+	if err != nil {
+		log.Printf("error: file write error: %v\n", err)
+		return err
+	}
+
+	err = w.Flush()
+	if err != nil {
+		log.Printf("error: file flush error: %v\n", err)
+		return err
+	}
 
 	return nil
 }
 
 func list() error {
-	files, err := ioutil.ReadDir(os.ExpandEnv(default_location))
+	files, err := ioutil.ReadDir(os.ExpandEnv(defaultLocation))
 	currentProfile := getCurrentProfile()
 
 	if err != nil {
@@ -147,12 +166,12 @@ func list() error {
 	return nil
 }
 
-func copy(srcProfile string, dstProfile string) error {
-	src := filepath.Join(os.ExpandEnv(default_location), srcProfile)
+func processCopyCommand(srcProfile string, dstProfile string) error {
+	src := filepath.Join(os.ExpandEnv(defaultLocation), srcProfile)
 	if !utils.Exists(src) {
 		return fmt.Errorf("profile '%s' not exists", srcProfile)
 	}
-	dst := filepath.Join(os.ExpandEnv(default_location), dstProfile)
+	dst := filepath.Join(os.ExpandEnv(defaultLocation), dstProfile)
 	if utils.Exists(dst) {
 		return fmt.Errorf("profile '%s' already exists", dstProfile)
 	}
@@ -166,8 +185,8 @@ func copy(srcProfile string, dstProfile string) error {
 	return nil
 }
 
-func delete(profile string) error {
-	path := filepath.Join(os.ExpandEnv(default_location), profile)
+func processDeleteCommand(profile string) error {
+	path := filepath.Join(os.ExpandEnv(defaultLocation), profile)
 	if !utils.Exists(path) {
 		return fmt.Errorf("profile '%s' not exists", profile)
 	}
@@ -198,7 +217,7 @@ func main() {
 				Aliases: []string{"S"},
 				Usage:   "save current environment to a profile",
 				Action: func(c *R.Context) error {
-					default_location = c.String("location")
+					defaultLocation = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -211,7 +230,7 @@ func main() {
 				Aliases: []string{"L"},
 				Usage:   "load a profile to system",
 				Action: func(c *R.Context) error {
-					default_location = c.String("location")
+					defaultLocation = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -224,7 +243,7 @@ func main() {
 				Aliases: []string{"l"},
 				Usage:   "list all profiles",
 				Action: func(c *R.Context) error {
-					default_location = c.String("location")
+					defaultLocation = c.String("location")
 					return list()
 				},
 			},
@@ -233,11 +252,11 @@ func main() {
 				Aliases: []string{"C"},
 				Usage:   "copy profile to another profile",
 				Action: func(c *R.Context) error {
-					default_location = c.String("location")
+					defaultLocation = c.String("location")
 					if c.Args().Len() != 2 {
 						return errors.New("wrong parameter")
 					}
-					return copy(c.Args().First(), c.Args().Get(1))
+					return processCopyCommand(c.Args().First(), c.Args().Get(1))
 				},
 			},
 			{
@@ -245,12 +264,12 @@ func main() {
 				Aliases: []string{"D"},
 				Usage:   "delete a profile",
 				Action: func(c *R.Context) error {
-					default_location = c.String("location")
+					defaultLocation = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
 					}
-					return delete(profile)
+					return processDeleteCommand(profile)
 				},
 			},
 		},
