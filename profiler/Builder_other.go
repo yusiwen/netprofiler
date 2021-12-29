@@ -3,6 +3,12 @@
 
 package profiler
 
+import (
+	"log"
+	"os"
+	"os/exec"
+)
+
 var Profilers []Profiler
 
 func init() {
