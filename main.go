@@ -2,12 +2,12 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -18,64 +18,6 @@ import (
 )
 
 var defaultLocation string = "$HOME/.config/netprofiles"
-
-var profilers = []P.Profiler{
-	&P.FileProfiler{
-		Name:  "netplan",
-		Files: []P.File{{Path: "/etc/netplan/99-custom.yaml", RootPrivilege: true}},
-		PostLoad: func() error {
-			log.Println("Running 'netplan generate --debug'")
-			_, err := exec.Command("sudo", "netplan", "generate", "--debug").Output()
-			if err != nil {
-				log.Fatalf("'sudo netplan generate --debug' failed: %v", err)
-				return err
-			}
-
-			log.Println("Running 'netplan apply'")
-			_, err = exec.Command("sudo", "netplan", "apply").Output()
-			if err != nil {
-				log.Fatal(err)
-				return err
-			}
-			return nil
-		},
-	},
-	&P.FileProfiler{
-		Name:  "hosts",
-		Files: []P.File{{Path: "/etc/hosts", RootPrivilege: true}},
-	},
-	&P.FileProfiler{
-		Name:  "apt",
-		Files: []P.File{{Path: "/etc/apt/apt.conf.d/02proxy", RootPrivilege: true}},
-	},
-	&P.FileProfiler{
-		Name: "docker",
-		Files: []P.File{
-			{Path: "/etc/systemd/system/docker.service.d/proxy.conf", RootPrivilege: true},
-			{Path: os.ExpandEnv("$HOME/.docker/config.json"), RootPrivilege: false},
-		},
-		PostLoad: func() error {
-			log.Println("Running 'systemctl daemon-reload'")
-			_, err := exec.Command("sudo", "systemctl", "daemon-reload").Output()
-			if err != nil {
-				log.Fatalf("'systemctl daemon-reload' failed: %v", err)
-				return err
-			}
-
-			log.Println("Running 'systemctl restart docker'")
-			_, err = exec.Command("sudo", "systemctl", "restart", "docker").Output()
-			if err != nil {
-				log.Fatal(err)
-				return err
-			}
-			return nil
-		},
-	},
-	&P.FileProfiler{
-		Name:  "git",
-		Files: []P.File{{Path: os.ExpandEnv("$HOME/.gitconfig"), RootPrivilege: false}},
-	},
-}
 
 func getCurrentProfile() string {
 	file, err := os.Open(filepath.Join(os.ExpandEnv(defaultLocation), ".current"))
@@ -98,7 +40,7 @@ func getCurrentProfile() string {
 }
 
 func save(profile string) error {
-	for _, p := range profilers {
+	for _, p := range P.Profilers {
 		err := p.Save(profile, os.ExpandEnv(defaultLocation))
 		if err != nil {
 			return err
@@ -109,7 +51,7 @@ func save(profile string) error {
 }
 
 func load(profile string) error {
-	for _, p := range profilers {
+	for _, p := range P.Profilers {
 		err := p.Load(profile, os.ExpandEnv(defaultLocation))
 		if err != nil {
 			return err
@@ -270,6 +212,22 @@ func main() {
 						return errors.New("profile name must not be null")
 					}
 					return processDeleteCommand(profile)
+				},
+			},
+			{
+				Name:    "list-profilers",
+				Aliases: []string{"p"},
+				Usage:   "list all profilers",
+				Action: func(c *R.Context) error {
+					for _, p := range P.Profilers {
+						s, error := json.Marshal(p)
+						if error != nil {
+							fmt.Println(error)
+						} else {
+							fmt.Printf("%s\n", s)
+						}
+					}
+					return nil
 				},
 			},
 		},

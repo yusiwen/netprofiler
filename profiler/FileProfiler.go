@@ -11,14 +11,14 @@ import (
 type PostLoadFunc func() error
 
 type File struct {
-	Path          string
-	RootPrivilege bool
+	Path          string `json:"path"`
+	RootPrivilege bool   `json:"root-privilege"`
 }
 
 type FileProfiler struct {
-	Name     string
-	Files    []File
-	PostLoad PostLoadFunc
+	Name     string       `json:"name"`
+	Files    []File       `json:"files"`
+	PostLoad PostLoadFunc `json:"-"`
 }
 
 func (fp *FileProfiler) Save(profile, location string) error {
