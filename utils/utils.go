@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 )
 
 func Exists(filePath string) bool {
@@ -72,28 +71,24 @@ func Move(src, dst string) error {
 	return os.Rename(src, dst)
 }
 
-func CopyDirectory(scrDir, dest string) error {
-	entries, err := ioutil.ReadDir(scrDir)
+// CopyDirectory recursively copies a src directory to a destination.
+func CopyDirectory(src, dst string) error {
+	entries, err := ioutil.ReadDir(src)
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		sourcePath := filepath.Join(scrDir, entry.Name())
-		destPath := filepath.Join(dest, entry.Name())
+		sourcePath := filepath.Join(src, entry.Name())
+		destPath := filepath.Join(dst, entry.Name())
 
 		fileInfo, err := os.Stat(sourcePath)
 		if err != nil {
 			return err
 		}
 
-		stat, ok := fileInfo.Sys().(*syscall.Stat_t)
-		if !ok {
-			return fmt.Errorf("failed to get raw syscall.Stat_t data for '%s'", sourcePath)
-		}
-
 		switch fileInfo.Mode() & os.ModeType {
 		case os.ModeDir:
-			if err := CreateIfNotExists(destPath, 0755); err != nil {
+			if err := createDir(destPath, 0755); err != nil {
 				return err
 			}
 			if err := CopyDirectory(sourcePath, destPath); err != nil {
@@ -109,9 +104,20 @@ func CopyDirectory(scrDir, dest string) error {
 			}
 		}
 
-		if err := os.Lchown(destPath, int(stat.Uid), int(stat.Gid)); err != nil {
-			return err
-		}
+		// `go test` fails on Windows even with this `if` supposedly
+		// protecting the `syscall.Stat_t` and `os.Lchown` calls (not
+		// available on windows). why?
+		/*
+			if runtime.GOOS != "windows" {
+					stat, ok := fileInfo.Sys().(*syscall.Stat_t)
+					if !ok {
+						return fmt.Errorf("failed to get raw syscall.Stat_t data for '%s'", sourcePath)
+					}
+					if err := os.Lchown(destPath, int(stat.Uid), int(stat.Gid)); err != nil {
+						return err
+					}
+			}
+		*/
 
 		isSymlink := entry.Mode()&os.ModeSymlink != 0
 		if !isSymlink {
@@ -120,5 +126,25 @@ func CopyDirectory(scrDir, dest string) error {
 			}
 		}
 	}
+	return nil
+}
+
+func exists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+func createDir(dir string, perm os.FileMode) error {
+	if exists(dir) {
+		return nil
+	}
+
+	if err := os.MkdirAll(dir, perm); err != nil {
+		return fmt.Errorf("failed to create directory: '%s', error: '%s'", dir, err.Error())
+	}
+
 	return nil
 }
