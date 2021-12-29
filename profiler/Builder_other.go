@@ -10,8 +10,11 @@ import (
 )
 
 var Profilers []Profiler
+var DefaultLocation string
 
 func init() {
+	DefaultLocation = "$HOME/.config/netprofiles"
+
 	Profilers = []Profiler{
 		&FileProfiler{
 			Name:  "netplan",

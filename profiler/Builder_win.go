@@ -8,8 +8,11 @@ import (
 )
 
 var Profilers []Profiler
+var DefaultLocation string
 
 func init() {
+	DefaultLocation = "$USERPROFILE\\.config\\netprofiles"
+
 	Profilers = []Profiler{
 		&FileProfiler{
 			Name:  "hosts",

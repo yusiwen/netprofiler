@@ -17,10 +17,8 @@ import (
 	R "github.com/urfave/cli/v2"
 )
 
-var defaultLocation string = "$HOME/.config/netprofiles"
-
 func getCurrentProfile() string {
-	file, err := os.Open(filepath.Join(os.ExpandEnv(defaultLocation), ".current"))
+	file, err := os.Open(filepath.Join(os.ExpandEnv(P.DefaultLocation), ".current"))
 	if err != nil {
 		log.Printf("failed to get current profile: %v\n", err)
 	}
@@ -41,7 +39,7 @@ func getCurrentProfile() string {
 
 func save(profile string) error {
 	for _, p := range P.Profilers {
-		err := p.Save(profile, os.ExpandEnv(defaultLocation))
+		err := p.Save(profile, os.ExpandEnv(P.DefaultLocation))
 		if err != nil {
 			return err
 		}
@@ -52,13 +50,13 @@ func save(profile string) error {
 
 func load(profile string) error {
 	for _, p := range P.Profilers {
-		err := p.Load(profile, os.ExpandEnv(defaultLocation))
+		err := p.Load(profile, os.ExpandEnv(P.DefaultLocation))
 		if err != nil {
 			return err
 		}
 	}
 	fmt.Printf("Profile '%s' loaded\n", profile)
-	file, err := os.Create(filepath.Join(os.ExpandEnv(defaultLocation), ".current"))
+	file, err := os.Create(filepath.Join(os.ExpandEnv(P.DefaultLocation), ".current"))
 	if err != nil {
 		log.Printf("save current profile failed: %v\n", err)
 		return nil
@@ -87,7 +85,7 @@ func load(profile string) error {
 }
 
 func list() error {
-	files, err := ioutil.ReadDir(os.ExpandEnv(defaultLocation))
+	files, err := ioutil.ReadDir(os.ExpandEnv(P.DefaultLocation))
 	currentProfile := getCurrentProfile()
 
 	if err != nil {
@@ -109,11 +107,11 @@ func list() error {
 }
 
 func processCopyCommand(srcProfile string, dstProfile string) error {
-	src := filepath.Join(os.ExpandEnv(defaultLocation), srcProfile)
+	src := filepath.Join(os.ExpandEnv(P.DefaultLocation), srcProfile)
 	if !utils.Exists(src) {
 		return fmt.Errorf("profile '%s' not exists", srcProfile)
 	}
-	dst := filepath.Join(os.ExpandEnv(defaultLocation), dstProfile)
+	dst := filepath.Join(os.ExpandEnv(P.DefaultLocation), dstProfile)
 	if utils.Exists(dst) {
 		return fmt.Errorf("profile '%s' already exists", dstProfile)
 	}
@@ -128,7 +126,7 @@ func processCopyCommand(srcProfile string, dstProfile string) error {
 }
 
 func processDeleteCommand(profile string) error {
-	path := filepath.Join(os.ExpandEnv(defaultLocation), profile)
+	path := filepath.Join(os.ExpandEnv(P.DefaultLocation), profile)
 	if !utils.Exists(path) {
 		return fmt.Errorf("profile '%s' not exists", profile)
 	}
@@ -159,7 +157,7 @@ func main() {
 				Aliases: []string{"S"},
 				Usage:   "save current environment to a profile",
 				Action: func(c *R.Context) error {
-					defaultLocation = c.String("location")
+					P.DefaultLocation = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -172,7 +170,7 @@ func main() {
 				Aliases: []string{"L"},
 				Usage:   "load a profile to system",
 				Action: func(c *R.Context) error {
-					defaultLocation = c.String("location")
+					P.DefaultLocation = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -185,7 +183,7 @@ func main() {
 				Aliases: []string{"l"},
 				Usage:   "list all profiles",
 				Action: func(c *R.Context) error {
-					defaultLocation = c.String("location")
+					P.DefaultLocation = c.String("location")
 					return list()
 				},
 			},
@@ -194,7 +192,7 @@ func main() {
 				Aliases: []string{"C"},
 				Usage:   "copy profile to another profile",
 				Action: func(c *R.Context) error {
-					defaultLocation = c.String("location")
+					P.DefaultLocation = c.String("location")
 					if c.Args().Len() != 2 {
 						return errors.New("wrong parameter")
 					}
@@ -206,7 +204,7 @@ func main() {
 				Aliases: []string{"D"},
 				Usage:   "delete a profile",
 				Action: func(c *R.Context) error {
-					defaultLocation = c.String("location")
+					P.DefaultLocation = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
