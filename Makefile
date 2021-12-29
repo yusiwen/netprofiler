@@ -1,7 +1,12 @@
 NAME=netprofiler
 BINDIR=bin
-VERSION=$(shell git describe --tags || echo "unknown version")
-BUILDTIME=$(shell date -u)
+ifeq ($(OS),Windows_NT)
+	VERSION=$(shell git describe --tags || echo "unknown version")
+	BUILDTIME=$(shell PowerShell -Command "& {Get-Date}")
+else
+	VERSION=$(shell git describe --tags || echo "unknown version")
+	BUILDTIME=$(shell date -u)
+endif
 GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags '-X "git.yusiwen.cn/yusiwen/netprofiler/constant.Version=$(VERSION)" \
 		-X "git.yusiwen.cn/yusiwen/netprofiler/constant.BuildTime=$(BUILDTIME)" \
 		-w -s -buildid='
