@@ -18,7 +18,11 @@ import (
 )
 
 func getCurrentProfile() string {
-	file, err := os.Open(filepath.Join(os.ExpandEnv(P.DefaultLocation), ".current"))
+	path := filepath.Join(os.ExpandEnv(P.DefaultLocation), ".current")
+	if !utils.Exists(path) {
+		return ""
+	}
+	file, err := os.Open(path)
 	if err != nil {
 		log.Printf("failed to get current profile: %v\n", err)
 	}
@@ -38,6 +42,10 @@ func getCurrentProfile() string {
 }
 
 func save(profile string) error {
+	err := utils.CreateIfNotExists(os.ExpandEnv(P.DefaultLocation), os.ModePerm)
+	if err != nil {
+		return err
+	}
 	for _, p := range P.Profilers {
 		err := p.Save(profile, os.ExpandEnv(P.DefaultLocation))
 		if err != nil {
@@ -85,6 +93,10 @@ func load(profile string) error {
 }
 
 func list() error {
+	if !utils.Exists(os.ExpandEnv(P.DefaultLocation)) {
+		return nil
+	}
+
 	files, err := ioutil.ReadDir(os.ExpandEnv(P.DefaultLocation))
 	currentProfile := getCurrentProfile()
 

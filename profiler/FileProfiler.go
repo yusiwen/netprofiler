@@ -23,10 +23,17 @@ type FileProfiler struct {
 
 func (fp *FileProfiler) Save(profile, location string) error {
 	for _, f := range fp.Files {
+		if !utils.Exists(f.Path) {
+			log.Printf("warning: '%s' not found", f.Path)
+			continue
+		}
 		dstPath := filepath.Join(location, profile, fp.Name)
-		os.MkdirAll(dstPath, os.ModePerm)
+		err := os.MkdirAll(dstPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
 		dst := filepath.Join(dstPath, filepath.Base(f.Path))
-		_, err := utils.Copy(f.Path, dst)
+		_, err = utils.Copy(f.Path, dst)
 		if err != nil {
 			return err
 		}
