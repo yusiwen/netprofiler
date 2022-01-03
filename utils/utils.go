@@ -5,9 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 )
 
 func Exists(filePath string) bool {
@@ -36,17 +34,6 @@ func CopySymLink(source, dest string) error {
 		return err
 	}
 	return os.Symlink(link, dest)
-}
-
-func CopySudo(src, dst string) error {
-	if runtime.GOOS == "windows" {
-		_, err := Copy(src, dst)
-		return err
-	} else {
-		cmd := exec.Command("sudo", "cp", "-v", src, dst)
-		return cmd.Run()
-	}
-
 }
 
 func Copy(src, dst string) (int64, error) {
