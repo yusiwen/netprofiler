@@ -17,8 +17,12 @@ func init() {
 
 	Profilers = []Profiler{
 		&FileProfiler{
-			Name:  "netplan",
-			Files: []File{{Path: "/etc/netplan/99-custom.yaml", RootPrivilege: true}},
+			Name: "netplan",
+			Files: []File{
+				{Path: "/etc/netplan/00-installer-config.yaml", RootPrivilege: true},
+				{Path: "/etc/netplan/01-network-manager-all.yaml", RootPrivilege: true},
+				{Path: "/etc/netplan/99-custom.yaml", RootPrivilege: true},
+			},
 			PostLoad: func() error {
 				log.Println("Running 'netplan generate --debug'")
 				_, err := exec.Command("sudo", "netplan", "generate", "--debug").Output()
@@ -47,6 +51,7 @@ func init() {
 		&FileProfiler{
 			Name: "docker",
 			Files: []File{
+				// https://docs.docker.com/config/daemon/systemd/#httphttps-proxy
 				{Path: "/etc/systemd/system/docker.service.d/proxy.conf", RootPrivilege: true},
 				{Path: os.ExpandEnv("$HOME/.docker/config.json"), RootPrivilege: false},
 			},
