@@ -9,6 +9,7 @@ import (
 )
 
 type PostLoadFunc func() error
+type EmptyHandlerFunc func() error
 
 type File struct {
 	Path          string `json:"path"`
@@ -16,15 +17,22 @@ type File struct {
 }
 
 type FileProfiler struct {
-	Name     string       `json:"name"`
-	Files    []File       `json:"files"`
-	PostLoad PostLoadFunc `json:"-"`
+	Name         string           `json:"name"`
+	Files        []File           `json:"files"`
+	PostLoad     PostLoadFunc     `json:"-"`
+	EmptyHandler EmptyHandlerFunc `json:"-"`
 }
 
 func (fp *FileProfiler) Save(profile, location string) error {
 	for _, f := range fp.Files {
 		if !utils.Exists(f.Path) {
 			log.Printf("warning: '%s' not found", f.Path)
+			if fp.EmptyHandler != nil {
+				err := fp.EmptyHandler()
+				if err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		dstPath := filepath.Join(location, profile, fp.Name)
