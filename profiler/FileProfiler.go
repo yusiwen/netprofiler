@@ -54,6 +54,11 @@ func (fp *FileProfiler) Load(profile, location string) error {
 	for _, f := range fp.Files {
 		srcPath := filepath.Join(location, profile, fp.Name)
 		src := filepath.Join(srcPath, filepath.Base(f.Path))
+		log.Printf("loading '%s' ...", src)
+		if !utils.Exists(src) {
+			log.Printf("loading '%s' ... skip", src)
+			continue
+		}
 		var err error
 		if f.RootPrivilege {
 			err = utils.CopySudo(src, f.Path)
@@ -63,7 +68,7 @@ func (fp *FileProfiler) Load(profile, location string) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("load '%s' to '%s'\n", src, f.Path)
+		log.Printf("loading '%s' to '%s'\n", src, f.Path)
 	}
 	if fp.PostLoad != nil {
 		err := fp.PostLoad()
