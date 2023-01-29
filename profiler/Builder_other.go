@@ -73,6 +73,29 @@ func init() {
 			},
 		},
 		&FileProfiler{
+			Name: "containerd",
+			Files: []File{
+				{Path: "/etc/systemd/system/containerd.service.d/proxy.conf", RootPrivilege: true},
+				{Path: "/etc/containerd/config.toml", RootPrivilege: true},
+			},
+			PostLoad: func() error {
+				log.Println("Running 'systemctl daemon-reload'")
+				_, err := exec.Command("sudo", "systemctl", "daemon-reload").Output()
+				if err != nil {
+					log.Fatalf("'systemctl daemon-reload' failed: %v", err)
+					return err
+				}
+
+				log.Println("Running 'systemctl restart containerd'")
+				_, err = exec.Command("sudo", "systemctl", "restart", "containerd").Output()
+				if err != nil {
+					log.Fatal(err)
+					return err
+				}
+				return nil
+			},
+		},
+		&FileProfiler{
 			Name:  "git",
 			Files: []File{{Path: os.ExpandEnv("$HOME/.gitconfig"), RootPrivilege: false}},
 		},
