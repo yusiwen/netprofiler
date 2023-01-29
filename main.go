@@ -230,9 +230,9 @@ func main() {
 				Usage:   "list all profilers",
 				Action: func(c *R.Context) error {
 					for _, p := range P.Profilers {
-						s, error := json.Marshal(p)
-						if error != nil {
-							fmt.Println(error)
+						s, err := json.Marshal(p)
+						if err != nil {
+							fmt.Println(err)
 						} else {
 							fmt.Printf("%s\n", s)
 						}
