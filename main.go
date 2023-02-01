@@ -159,7 +159,7 @@ func main() {
 			&R.StringFlag{
 				Name:    "location",
 				Aliases: []string{"l"},
-				Value:   "$HOME/.config/netprofiles",
+				Value:   P.DefaultLocation,
 				Usage:   "Set location to save profiles",
 			},
 		},

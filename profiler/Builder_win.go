@@ -11,7 +11,7 @@ var Profilers []Profiler
 var DefaultLocation string
 
 func init() {
-	DefaultLocation = "$USERPROFILE\\.config\\netprofiles"
+	DefaultLocation = "$USERPROFILE\\.config\\netprofiles\\$COMPUTERNAME"
 
 	Profilers = []Profiler{
 		&FileProfiler{
