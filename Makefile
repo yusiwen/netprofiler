@@ -1,4 +1,5 @@
-NAME=netprofiler
+MODULE_NAME=$(shell grep '^module ' go.mod | cut -d ' ' -f 2)
+NAME=$(notdir $(MODULE_NAME))
 BINDIR=bin
 ifeq ($(OS),Windows_NT)
 	VERSION=$(shell git describe --tags || echo "unknown version")
@@ -7,8 +8,8 @@ else
 	VERSION=$(shell git describe --tags || echo "unknown version")
 	BUILDTIME=$(shell date -u)
 endif
-GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags '-X "git.yusiwen.cn/yusiwen/netprofiler/constant.Version=$(VERSION)" \
-		-X "git.yusiwen.cn/yusiwen/netprofiler/constant.BuildTime=$(BUILDTIME)" \
+GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags '-X "$(MODULE_NAME)/constant.Version=$(VERSION)" \
+		-X "$(MODULE_NAME)/constant.BuildTime=$(BUILDTIME)" \
 		-w -s -buildid='
 
 PLATFORM_LIST = \
@@ -100,5 +101,6 @@ $(zip_releases): %.zip : %
 all-arch: $(PLATFORM_LIST)
 
 releases: $(gz_releases) $(zip_releases)
+.PHONY: clean
 clean:
 	rm $(BINDIR)/*
