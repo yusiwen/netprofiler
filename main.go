@@ -46,6 +46,16 @@ func save(profile string) error {
 	if err != nil {
 		return err
 	}
+
+	// Overwriting confirmation
+	if !P.IsForce {
+		if utils.Exists(filepath.Join(os.ExpandEnv(P.DefaultLocation), profile)) {
+			if !utils.AskForConfirmation(fmt.Sprintf("Profile '%s' already exists, overwrite it?", profile)) {
+				return nil
+			}
+		}
+	}
+
 	for _, p := range P.Profilers {
 		err := p.Save(profile, os.ExpandEnv(P.DefaultLocation))
 		if err != nil {
@@ -170,11 +180,21 @@ func main() {
 				Usage:   "save current environment to a profile",
 				Action: func(c *R.Context) error {
 					P.DefaultLocation = c.String("location")
+					if c.Bool("force") {
+						P.IsForce = true
+					}
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
 					}
 					return save(profile)
+				},
+				Flags: []R.Flag{
+					&R.BoolFlag{
+						Name:    "force",
+						Aliases: []string{"f"},
+						Usage:   "Save without confirmation",
+					},
 				},
 			},
 			{
