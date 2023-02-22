@@ -67,6 +67,13 @@ func save(profile string) error {
 }
 
 func load(profile string) error {
+	currentProfile := getCurrentProfile()
+	if profile == currentProfile {
+		if !utils.AskForConfirmation(fmt.Sprintf("Profile '%s' is currently loaded, force reloading?", profile)) {
+			return nil
+		}
+	}
+
 	for _, p := range P.Profilers {
 		err := p.Load(profile, os.ExpandEnv(P.DefaultLocation))
 		if err != nil {
