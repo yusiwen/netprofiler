@@ -267,6 +267,15 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:    "current",
+				Aliases: []string{"c"},
+				Usage:   "get current profile",
+				Action: func(c *R.Context) error {
+					fmt.Println(getCurrentProfile())
+					return nil
+				},
+			},
 		},
 	}
 
