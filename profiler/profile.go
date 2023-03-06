@@ -14,17 +14,29 @@ import (
 type ProfileManager interface {
 	Save(profile string) error
 	Load(profile string) error
+
 	PostUp() error
 	PostDown() error
+
+	SetPostUpCommand(command string) error
+	SetPortDownCommand(command string) error
+
+	GetLocation() string
+	SetLocation(location string)
+	IsForce() bool
+	SetForce(force bool)
 	ListProfiles() error
-	GetCurrentProfile() Profile
+	ListUnits() error
+	GetCurrentProfile() *Profile
 }
 
 type DefaultProfileManager struct {
 	Units    []Unit
 	Location string
-	IsForce  bool
+	Force    bool
 }
+
+var PM ProfileManager
 
 type Profile struct {
 	Name     string `json:"name"`
@@ -38,7 +50,7 @@ func (p *DefaultProfileManager) Save(profile string) error {
 	}
 
 	// Overwriting confirmation
-	if !p.IsForce {
+	if !p.Force {
 		if utils.Exists(filepath.Join(os.ExpandEnv(p.Location), profile)) {
 			if !utils.AskForConfirmation(fmt.Sprintf("Profile '%s' already exists, overwrite it?", profile)) {
 				return nil
@@ -177,4 +189,42 @@ func (p *DefaultProfileManager) ListProfiles() error {
 	}
 
 	return nil
+}
+
+func (p *DefaultProfileManager) ListUnits() error {
+	for _, p := range p.Units {
+		s, err := json.Marshal(p)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Printf("%s\n", s)
+		}
+	}
+	return nil
+}
+
+func (p *DefaultProfileManager) SetPostUpCommand(command string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *DefaultProfileManager) SetPortDownCommand(command string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *DefaultProfileManager) GetLocation() string {
+	return p.Location
+}
+
+func (p *DefaultProfileManager) IsForce() bool {
+	return p.Force
+}
+
+func (p *DefaultProfileManager) SetForce(force bool) {
+	p.Force = force
+}
+
+func (p *DefaultProfileManager) SetLocation(location string) {
+	p.Location = location
 }

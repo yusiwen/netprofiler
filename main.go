@@ -16,11 +16,11 @@ import (
 )
 
 func processCopyCommand(srcProfile string, dstProfile string) error {
-	src := filepath.Join(os.ExpandEnv(P.PM.Location), srcProfile)
+	src := filepath.Join(os.ExpandEnv(P.PM.GetLocation()), srcProfile)
 	if !utils.Exists(src) {
 		return fmt.Errorf("profile '%s' not exists", srcProfile)
 	}
-	dst := filepath.Join(os.ExpandEnv(P.PM.Location), dstProfile)
+	dst := filepath.Join(os.ExpandEnv(P.PM.GetLocation()), dstProfile)
 	if utils.Exists(dst) {
 		return fmt.Errorf("profile '%s' already exists", dstProfile)
 	}
@@ -35,7 +35,7 @@ func processCopyCommand(srcProfile string, dstProfile string) error {
 }
 
 func processDeleteCommand(profile string) error {
-	path := filepath.Join(os.ExpandEnv(P.PM.Location), profile)
+	path := filepath.Join(os.ExpandEnv(P.PM.GetLocation()), profile)
 	if !utils.Exists(path) {
 		return fmt.Errorf("profile '%s' not exists", profile)
 	}
@@ -49,14 +49,14 @@ func processDeleteCommand(profile string) error {
 
 func main() {
 	app := &R.App{
-		Name:    "netprofiler",
+		Name:    "netprofiles",
 		Usage:   "My network profiles switcher for working at home, office and business travels",
 		Version: strings.Join([]string{constant.Version, " (", constant.BuildTime, ")"}, ""),
 		Flags: []R.Flag{
 			&R.StringFlag{
 				Name:    "location",
 				Aliases: []string{"l"},
-				Value:   P.PM.Location,
+				Value:   P.PM.GetLocation(),
 				Usage:   "Set location to save profiles",
 			},
 		},
@@ -66,9 +66,9 @@ func main() {
 				Aliases: []string{"S"},
 				Usage:   "save current environment to a profile",
 				Action: func(c *R.Context) error {
-					P.PM.Location = c.String("location")
+					P.PM.SetLocation(c.String("location"))
 					if c.Bool("force") {
-						P.PM.IsForce = true
+						P.PM.SetForce(true)
 					}
 					profile := c.Args().First()
 					if len(profile) == 0 {
@@ -89,7 +89,7 @@ func main() {
 				Aliases: []string{"L"},
 				Usage:   "load a profile to system",
 				Action: func(c *R.Context) error {
-					P.PM.Location = c.String("location")
+					P.PM.SetLocation(c.String("location"))
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -102,7 +102,7 @@ func main() {
 				Aliases: []string{"l"},
 				Usage:   "list all profiles",
 				Action: func(c *R.Context) error {
-					P.PM.Location = c.String("location")
+					P.PM.SetLocation(c.String("location"))
 					return P.PM.ListProfiles()
 				},
 			},
@@ -111,7 +111,7 @@ func main() {
 				Aliases: []string{"C"},
 				Usage:   "copy profile to another profile",
 				Action: func(c *R.Context) error {
-					P.PM.Location = c.String("location")
+					P.PM.SetLocation(c.String("location"))
 					if c.Args().Len() != 2 {
 						return errors.New("wrong parameter")
 					}
@@ -123,7 +123,7 @@ func main() {
 				Aliases: []string{"D"},
 				Usage:   "delete a profile",
 				Action: func(c *R.Context) error {
-					P.PM.Location = c.String("location")
+					P.PM.SetLocation(c.String("location"))
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -132,28 +132,35 @@ func main() {
 				},
 			},
 			{
-				Name:    "list-profilers",
+				Name:    "list-units",
 				Aliases: []string{"p"},
-				Usage:   "list all profilers",
+				Usage:   "list all units",
 				Action: func(c *R.Context) error {
-					for _, p := range P.PM.Units {
-						s, err := json.Marshal(p)
-						if err != nil {
-							fmt.Println(err)
-						} else {
-							fmt.Printf("%s\n", s)
-						}
-					}
-					return nil
+					return P.PM.ListUnits()
 				},
 			},
 			{
 				Name:    "current",
 				Aliases: []string{"c"},
-				Usage:   "get current profile",
+				Usage:   "get current profile name",
 				Action: func(c *R.Context) error {
-					fmt.Println(P.PM.GetCurrentProfile())
+					p := P.PM.GetCurrentProfile()
+					if p != nil {
+						if c.Bool("all") {
+							bytes, _ := json.MarshalIndent(p, "", "  ")
+							fmt.Println(string(bytes))
+						} else {
+							fmt.Println(p.Name)
+						}
+					}
 					return nil
+				},
+				Flags: []R.Flag{
+					&R.BoolFlag{
+						Name:    "all",
+						Aliases: []string{"a"},
+						Usage:   "return all profile info",
+					},
 				},
 			},
 		},
