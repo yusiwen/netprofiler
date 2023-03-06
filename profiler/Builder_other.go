@@ -9,12 +9,14 @@ import (
 	"os/exec"
 )
 
-func init() {
-	DefaultLocation = "$HOME/.config/netprofiles/$HOSTNAME"
-	IsForce = false
+var DefaultProfileManager ProfileManager
 
-	Profilers = []Profiler{
-		&FileProfiler{
+func init() {
+	DefaultProfileManager.Location = "$HOME/.config/netprofiles/$HOSTNAME"
+	DefaultProfileManager.IsForce = false
+
+	DefaultProfileManager.Units = []Unit{
+		&FileUnit{
 			Name: "netplan",
 			Files: []File{
 				{Path: "/etc/netplan/00-installer-config.yaml", RootPrivilege: true},
@@ -38,15 +40,15 @@ func init() {
 				return nil
 			},
 		},
-		&FileProfiler{
+		&FileUnit{
 			Name:  "hosts",
 			Files: []File{{Path: "/etc/hosts", RootPrivilege: true}},
 		},
-		&FileProfiler{
+		&FileUnit{
 			Name:  "apt",
 			Files: []File{{Path: "/etc/apt/apt.conf.d/02proxy", RootPrivilege: true}},
 		},
-		&FileProfiler{
+		&FileUnit{
 			Name: "docker",
 			Files: []File{
 				// https://docs.docker.com/config/daemon/systemd/#httphttps-proxy
@@ -70,7 +72,7 @@ func init() {
 				return nil
 			},
 		},
-		&FileProfiler{
+		&FileUnit{
 			Name: "containerd",
 			Files: []File{
 				{Path: "/etc/systemd/system/containerd.service.d/proxy.conf", RootPrivilege: true},
@@ -93,7 +95,7 @@ func init() {
 				return nil
 			},
 		},
-		&FileProfiler{
+		&FileUnit{
 			Name:  "git",
 			Files: []File{{Path: os.ExpandEnv("$HOME/.gitconfig"), RootPrivilege: false}},
 		},

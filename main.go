@@ -1,146 +1,26 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"git.yusiwen.cn/yusiwen/netprofiler/constant"
-	P "git.yusiwen.cn/yusiwen/netprofiler/profiler"
-	"git.yusiwen.cn/yusiwen/netprofiler/utils"
 	R "github.com/urfave/cli/v2"
+	"github.com/yusiwen/netprofiles/constant"
+	P "github.com/yusiwen/netprofiles/profiler"
+	"github.com/yusiwen/netprofiles/utils"
 )
 
-func getCurrentProfile() string {
-	path := filepath.Join(os.ExpandEnv(P.DefaultLocation), ".current")
-	if !utils.Exists(path) {
-		return ""
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		log.Printf("failed to get current profile: %v\n", err)
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Printf("warning: file close error: %v\n", err)
-		}
-	}(file)
-
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Printf("failed to get current profile: %v\n", err)
-		return ""
-	}
-	return string(bytes)
-}
-
-func save(profile string) error {
-	err := utils.CreateIfNotExists(os.ExpandEnv(P.DefaultLocation), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	// Overwriting confirmation
-	if !P.IsForce {
-		if utils.Exists(filepath.Join(os.ExpandEnv(P.DefaultLocation), profile)) {
-			if !utils.AskForConfirmation(fmt.Sprintf("Profile '%s' already exists, overwrite it?", profile)) {
-				return nil
-			}
-		}
-	}
-
-	for _, p := range P.Profilers {
-		err := p.Save(profile, os.ExpandEnv(P.DefaultLocation))
-		if err != nil {
-			return err
-		}
-	}
-	fmt.Printf("Profile '%s' saved\n", profile)
-	return nil
-}
-
-func load(profile string) error {
-	currentProfile := getCurrentProfile()
-	if profile == currentProfile {
-		if !utils.AskForConfirmation(fmt.Sprintf("Profile '%s' is currently loaded, force reloading?", profile)) {
-			return nil
-		}
-	}
-
-	for _, p := range P.Profilers {
-		err := p.Load(profile, os.ExpandEnv(P.DefaultLocation))
-		if err != nil {
-			return err
-		}
-	}
-	fmt.Printf("Profile '%s' loaded\n", profile)
-	file, err := os.Create(filepath.Join(os.ExpandEnv(P.DefaultLocation), ".current"))
-	if err != nil {
-		log.Printf("save current profile failed: %v\n", err)
-		return nil
-	}
-
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Printf("warning: file close error: %v\n", err)
-		}
-	}(file)
-	w := bufio.NewWriter(file)
-	_, err = w.WriteString(profile)
-	if err != nil {
-		log.Printf("error: file write error: %v\n", err)
-		return err
-	}
-
-	err = w.Flush()
-	if err != nil {
-		log.Printf("error: file flush error: %v\n", err)
-		return err
-	}
-
-	return nil
-}
-
-func list() error {
-	if !utils.Exists(os.ExpandEnv(P.DefaultLocation)) {
-		return nil
-	}
-
-	files, err := ioutil.ReadDir(os.ExpandEnv(P.DefaultLocation))
-	currentProfile := getCurrentProfile()
-
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	for _, f := range files {
-		if f.IsDir() {
-			if f.Name() == currentProfile {
-				fmt.Println(">> " + f.Name())
-			} else {
-				fmt.Println(f.Name())
-			}
-		}
-	}
-
-	return nil
-}
-
 func processCopyCommand(srcProfile string, dstProfile string) error {
-	src := filepath.Join(os.ExpandEnv(P.DefaultLocation), srcProfile)
+	src := filepath.Join(os.ExpandEnv(P.DefaultProfileManager.Location), srcProfile)
 	if !utils.Exists(src) {
 		return fmt.Errorf("profile '%s' not exists", srcProfile)
 	}
-	dst := filepath.Join(os.ExpandEnv(P.DefaultLocation), dstProfile)
+	dst := filepath.Join(os.ExpandEnv(P.DefaultProfileManager.Location), dstProfile)
 	if utils.Exists(dst) {
 		return fmt.Errorf("profile '%s' already exists", dstProfile)
 	}
@@ -155,7 +35,7 @@ func processCopyCommand(srcProfile string, dstProfile string) error {
 }
 
 func processDeleteCommand(profile string) error {
-	path := filepath.Join(os.ExpandEnv(P.DefaultLocation), profile)
+	path := filepath.Join(os.ExpandEnv(P.DefaultProfileManager.Location), profile)
 	if !utils.Exists(path) {
 		return fmt.Errorf("profile '%s' not exists", profile)
 	}
@@ -176,7 +56,7 @@ func main() {
 			&R.StringFlag{
 				Name:    "location",
 				Aliases: []string{"l"},
-				Value:   P.DefaultLocation,
+				Value:   P.DefaultProfileManager.Location,
 				Usage:   "Set location to save profiles",
 			},
 		},
@@ -186,15 +66,15 @@ func main() {
 				Aliases: []string{"S"},
 				Usage:   "save current environment to a profile",
 				Action: func(c *R.Context) error {
-					P.DefaultLocation = c.String("location")
+					P.DefaultProfileManager.Location = c.String("location")
 					if c.Bool("force") {
-						P.IsForce = true
+						P.DefaultProfileManager.IsForce = true
 					}
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
 					}
-					return save(profile)
+					return P.DefaultProfileManager.Save(profile)
 				},
 				Flags: []R.Flag{
 					&R.BoolFlag{
@@ -209,12 +89,12 @@ func main() {
 				Aliases: []string{"L"},
 				Usage:   "load a profile to system",
 				Action: func(c *R.Context) error {
-					P.DefaultLocation = c.String("location")
+					P.DefaultProfileManager.Location = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
 					}
-					return load(profile)
+					return P.DefaultProfileManager.Load(profile)
 				},
 			},
 			{
@@ -222,8 +102,8 @@ func main() {
 				Aliases: []string{"l"},
 				Usage:   "list all profiles",
 				Action: func(c *R.Context) error {
-					P.DefaultLocation = c.String("location")
-					return list()
+					P.DefaultProfileManager.Location = c.String("location")
+					return P.DefaultProfileManager.ListProfiles()
 				},
 			},
 			{
@@ -231,7 +111,7 @@ func main() {
 				Aliases: []string{"C"},
 				Usage:   "copy profile to another profile",
 				Action: func(c *R.Context) error {
-					P.DefaultLocation = c.String("location")
+					P.DefaultProfileManager.Location = c.String("location")
 					if c.Args().Len() != 2 {
 						return errors.New("wrong parameter")
 					}
@@ -243,7 +123,7 @@ func main() {
 				Aliases: []string{"D"},
 				Usage:   "delete a profile",
 				Action: func(c *R.Context) error {
-					P.DefaultLocation = c.String("location")
+					P.DefaultProfileManager.Location = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -256,7 +136,7 @@ func main() {
 				Aliases: []string{"p"},
 				Usage:   "list all profilers",
 				Action: func(c *R.Context) error {
-					for _, p := range P.Profilers {
+					for _, p := range P.DefaultProfileManager.Units {
 						s, err := json.Marshal(p)
 						if err != nil {
 							fmt.Println(err)
@@ -272,7 +152,7 @@ func main() {
 				Aliases: []string{"c"},
 				Usage:   "get current profile",
 				Action: func(c *R.Context) error {
-					fmt.Println(getCurrentProfile())
+					fmt.Println(P.DefaultProfileManager.GetCurrentProfile())
 					return nil
 				},
 			},

@@ -7,16 +7,18 @@ import (
 	"os"
 )
 
-func init() {
-	DefaultLocation = "$USERPROFILE\\.config\\netprofiles\\$COMPUTERNAME"
-	IsForce = false
+var DefaultProfileManager ProfileManager
 
-	Profilers = []Profiler{
-		&FileProfiler{
+func init() {
+	DefaultProfileManager.Location = "$USERPROFILE\\.config\\netprofiles\\$COMPUTERNAME"
+	DefaultProfileManager.IsForce = false
+
+	DefaultProfileManager.Units = []Unit{
+		&FileUnit{
 			Name:  "hosts",
 			Files: []File{{Path: "c:\\Windows\\System32\\drivers\\etc\\hosts", RootPrivilege: true}},
 		},
-		&FileProfiler{
+		&FileUnit{
 			Name:  "git",
 			Files: []File{{Path: os.ExpandEnv("$USERPROFILE\\.gitconfig"), RootPrivilege: false}},
 		},

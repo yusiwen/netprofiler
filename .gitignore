@@ -1,5 +1,5 @@
 .env
-netprofiler
+netprofiles
 *.syso
 
 # Binaries for programs and plugins

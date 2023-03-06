@@ -1,4 +1,4 @@
-module git.yusiwen.cn/yusiwen/netprofiler
+module github.com/yusiwen/netprofiles
 
 go 1.17
 

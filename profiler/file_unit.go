@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"git.yusiwen.cn/yusiwen/netprofiler/utils"
+	"github.com/yusiwen/netprofiles/utils"
 )
 
 type PostLoadFunc func() error
@@ -16,14 +16,14 @@ type File struct {
 	RootPrivilege bool   `json:"root-privilege"`
 }
 
-type FileProfiler struct {
+type FileUnit struct {
 	Name         string           `json:"name"`
 	Files        []File           `json:"files"`
 	PostLoad     PostLoadFunc     `json:"-"`
 	EmptyHandler EmptyHandlerFunc `json:"-"`
 }
 
-func (fp *FileProfiler) Save(profile, location string) error {
+func (fp *FileUnit) Save(profile, location string) error {
 	for _, f := range fp.Files {
 		if !utils.Exists(f.Path) {
 			log.Printf("warning: '%s' not found", f.Path)
@@ -50,7 +50,7 @@ func (fp *FileProfiler) Save(profile, location string) error {
 	return nil
 }
 
-func (fp *FileProfiler) Load(profile, location string) error {
+func (fp *FileUnit) Load(profile, location string) error {
 	for _, f := range fp.Files {
 		srcPath := filepath.Join(location, profile, fp.Name)
 		src := filepath.Join(srcPath, filepath.Base(f.Path))
