@@ -9,13 +9,13 @@ import (
 	"os/exec"
 )
 
-var DefaultProfileManager ProfileManager
+var PM DefaultProfileManager
 
 func init() {
-	DefaultProfileManager.Location = "$HOME/.config/netprofiles/$HOSTNAME"
-	DefaultProfileManager.IsForce = false
+	PM.Location = "$HOME/.config/netprofiles/$HOSTNAME"
+	PM.IsForce = false
 
-	DefaultProfileManager.Units = []Unit{
+	PM.Units = []Unit{
 		&FileUnit{
 			Name: "netplan",
 			Files: []File{

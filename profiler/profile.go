@@ -2,31 +2,36 @@ package profiler
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/yusiwen/netprofiles/utils"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-type Profile interface {
+type ProfileManager interface {
 	Save(profile string) error
 	Load(profile string) error
 	PostUp() error
 	PostDown() error
 	ListProfiles() error
-	GetCurrentProfile() string
+	GetCurrentProfile() Profile
 }
 
-type ProfileManager struct {
+type DefaultProfileManager struct {
 	Units    []Unit
 	Location string
 	IsForce  bool
 }
 
-func (p *ProfileManager) Save(profile string) error {
+type Profile struct {
+	Name     string `json:"name"`
+	Location string `json:"location"`
+}
+
+func (p *DefaultProfileManager) Save(profile string) error {
 	err := utils.CreateIfNotExists(os.ExpandEnv(p.Location), os.ModePerm)
 	if err != nil {
 		return err
@@ -47,13 +52,13 @@ func (p *ProfileManager) Save(profile string) error {
 			return err
 		}
 	}
-	fmt.Printf("Unit '%s' saved\n", profile)
+	fmt.Printf("Profile '%s' saved\n", profile)
 	return nil
 }
 
-func (p *ProfileManager) Load(profile string) error {
+func (p *DefaultProfileManager) Load(profile string) error {
 	currentProfile := p.GetCurrentProfile()
-	if profile == currentProfile {
+	if currentProfile != nil && profile == currentProfile.Name {
 		if !utils.AskForConfirmation(fmt.Sprintf("Profile '%s' is currently loaded, force reloading?", profile)) {
 			return nil
 		}
@@ -78,8 +83,16 @@ func (p *ProfileManager) Load(profile string) error {
 			log.Printf("warning: file close error: %v\n", err)
 		}
 	}(file)
+
+	info := Profile{Name: profile, Location: os.ExpandEnv(p.Location)}
+	bytes, err := json.Marshal(info)
+	fmt.Println(string(bytes))
+	if err != nil {
+		log.Printf("error: marshal json error: %v\n", err)
+		return err
+	}
 	w := bufio.NewWriter(file)
-	_, err = w.WriteString(profile)
+	_, err = w.Write(bytes)
 	if err != nil {
 		log.Printf("error: file write error: %v\n", err)
 		return err
@@ -94,25 +107,25 @@ func (p *ProfileManager) Load(profile string) error {
 	return nil
 }
 
-func (p *ProfileManager) PostUp() error {
+func (p *DefaultProfileManager) PostUp() error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p *ProfileManager) PostDown() error {
+func (p *DefaultProfileManager) PostDown() error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p *ProfileManager) GetCurrentProfile() string {
+func (p *DefaultProfileManager) GetCurrentProfile() *Profile {
 	path := filepath.Join(os.ExpandEnv(p.Location), ".current")
 	if !utils.Exists(path) {
-		return ""
+		return nil
 	}
 	file, err := os.Open(path)
 	if err != nil {
 		log.Printf("failed to get current profile: %v\n", err)
-		return ""
+		return nil
 	}
 	defer func(file *os.File) {
 		err := file.Close()
@@ -124,28 +137,38 @@ func (p *ProfileManager) GetCurrentProfile() string {
 	bytes, err := io.ReadAll(file)
 	if err != nil {
 		log.Printf("failed to get current profile: %v\n", err)
-		return ""
+		return nil
 	}
 
-	return string(bytes)
+	profile := Profile{}
+	err = json.Unmarshal(bytes, &profile)
+	if err != nil {
+		log.Printf("failed to parse .current: %v\n", err)
+		return nil
+	}
+	return &profile
 }
 
-func (p *ProfileManager) ListProfiles() error {
+func (p *DefaultProfileManager) ListProfiles() error {
 	if !utils.Exists(os.ExpandEnv(p.Location)) {
 		return nil
 	}
 
-	files, err := ioutil.ReadDir(os.ExpandEnv(p.Location))
-	currentProfile := p.GetCurrentProfile()
-
+	files, err := os.ReadDir(os.ExpandEnv(p.Location))
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 
+	var current = ""
+	currentProfile := p.GetCurrentProfile()
+	if currentProfile != nil {
+		current = currentProfile.Name
+	}
+
 	for _, f := range files {
 		if f.IsDir() {
-			if f.Name() == currentProfile {
+			if f.Name() == current {
 				fmt.Println(">> " + f.Name())
 			} else {
 				fmt.Println(f.Name())

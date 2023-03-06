@@ -16,11 +16,11 @@ import (
 )
 
 func processCopyCommand(srcProfile string, dstProfile string) error {
-	src := filepath.Join(os.ExpandEnv(P.DefaultProfileManager.Location), srcProfile)
+	src := filepath.Join(os.ExpandEnv(P.PM.Location), srcProfile)
 	if !utils.Exists(src) {
 		return fmt.Errorf("profile '%s' not exists", srcProfile)
 	}
-	dst := filepath.Join(os.ExpandEnv(P.DefaultProfileManager.Location), dstProfile)
+	dst := filepath.Join(os.ExpandEnv(P.PM.Location), dstProfile)
 	if utils.Exists(dst) {
 		return fmt.Errorf("profile '%s' already exists", dstProfile)
 	}
@@ -35,7 +35,7 @@ func processCopyCommand(srcProfile string, dstProfile string) error {
 }
 
 func processDeleteCommand(profile string) error {
-	path := filepath.Join(os.ExpandEnv(P.DefaultProfileManager.Location), profile)
+	path := filepath.Join(os.ExpandEnv(P.PM.Location), profile)
 	if !utils.Exists(path) {
 		return fmt.Errorf("profile '%s' not exists", profile)
 	}
@@ -56,7 +56,7 @@ func main() {
 			&R.StringFlag{
 				Name:    "location",
 				Aliases: []string{"l"},
-				Value:   P.DefaultProfileManager.Location,
+				Value:   P.PM.Location,
 				Usage:   "Set location to save profiles",
 			},
 		},
@@ -66,15 +66,15 @@ func main() {
 				Aliases: []string{"S"},
 				Usage:   "save current environment to a profile",
 				Action: func(c *R.Context) error {
-					P.DefaultProfileManager.Location = c.String("location")
+					P.PM.Location = c.String("location")
 					if c.Bool("force") {
-						P.DefaultProfileManager.IsForce = true
+						P.PM.IsForce = true
 					}
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
 					}
-					return P.DefaultProfileManager.Save(profile)
+					return P.PM.Save(profile)
 				},
 				Flags: []R.Flag{
 					&R.BoolFlag{
@@ -89,12 +89,12 @@ func main() {
 				Aliases: []string{"L"},
 				Usage:   "load a profile to system",
 				Action: func(c *R.Context) error {
-					P.DefaultProfileManager.Location = c.String("location")
+					P.PM.Location = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
 					}
-					return P.DefaultProfileManager.Load(profile)
+					return P.PM.Load(profile)
 				},
 			},
 			{
@@ -102,8 +102,8 @@ func main() {
 				Aliases: []string{"l"},
 				Usage:   "list all profiles",
 				Action: func(c *R.Context) error {
-					P.DefaultProfileManager.Location = c.String("location")
-					return P.DefaultProfileManager.ListProfiles()
+					P.PM.Location = c.String("location")
+					return P.PM.ListProfiles()
 				},
 			},
 			{
@@ -111,7 +111,7 @@ func main() {
 				Aliases: []string{"C"},
 				Usage:   "copy profile to another profile",
 				Action: func(c *R.Context) error {
-					P.DefaultProfileManager.Location = c.String("location")
+					P.PM.Location = c.String("location")
 					if c.Args().Len() != 2 {
 						return errors.New("wrong parameter")
 					}
@@ -123,7 +123,7 @@ func main() {
 				Aliases: []string{"D"},
 				Usage:   "delete a profile",
 				Action: func(c *R.Context) error {
-					P.DefaultProfileManager.Location = c.String("location")
+					P.PM.Location = c.String("location")
 					profile := c.Args().First()
 					if len(profile) == 0 {
 						return errors.New("profile name must not be null")
@@ -136,7 +136,7 @@ func main() {
 				Aliases: []string{"p"},
 				Usage:   "list all profilers",
 				Action: func(c *R.Context) error {
-					for _, p := range P.DefaultProfileManager.Units {
+					for _, p := range P.PM.Units {
 						s, err := json.Marshal(p)
 						if err != nil {
 							fmt.Println(err)
@@ -152,7 +152,7 @@ func main() {
 				Aliases: []string{"c"},
 				Usage:   "get current profile",
 				Action: func(c *R.Context) error {
-					fmt.Println(P.DefaultProfileManager.GetCurrentProfile())
+					fmt.Println(P.PM.GetCurrentProfile())
 					return nil
 				},
 			},

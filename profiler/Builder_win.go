@@ -7,13 +7,13 @@ import (
 	"os"
 )
 
-var DefaultProfileManager ProfileManager
+var PM DefaultProfileManager
 
 func init() {
-	DefaultProfileManager.Location = "$USERPROFILE\\.config\\netprofiles\\$COMPUTERNAME"
-	DefaultProfileManager.IsForce = false
+	PM.Location = "$USERPROFILE\\.config\\netprofiles\\$COMPUTERNAME"
+	PM.IsForce = false
 
-	DefaultProfileManager.Units = []Unit{
+	PM.Units = []Unit{
 		&FileUnit{
 			Name:  "hosts",
 			Files: []File{{Path: "c:\\Windows\\System32\\drivers\\etc\\hosts", RootPrivilege: true}},
