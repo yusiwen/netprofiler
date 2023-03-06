@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -74,13 +73,24 @@ func Copy(src, dst string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer source.Close()
+	defer func(source *os.File) {
+		err := source.Close()
+		if err != nil {
+			log.Printf("failed to close [%v]: %v\n", source, err)
+		}
+	}(source)
 
 	destination, err := os.Create(dst)
 	if err != nil {
 		return 0, err
 	}
-	defer destination.Close()
+	defer func(destination *os.File) {
+		err := destination.Close()
+		if err != nil {
+			log.Printf("failed to close [%v]: %v\n", destination, err)
+		}
+	}(destination)
+
 	nBytes, err := io.Copy(destination, source)
 	return nBytes, err
 }
@@ -91,7 +101,7 @@ func Move(src, dst string) error {
 
 // CopyDirectory recursively copies a src directory to a destination.
 func CopyDirectory(src, dst string) error {
-	entries, err := ioutil.ReadDir(src)
+	entries, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -137,9 +147,9 @@ func CopyDirectory(src, dst string) error {
 			}
 		*/
 
-		isSymlink := entry.Mode()&os.ModeSymlink != 0
+		isSymlink := entry.Type()&os.ModeSymlink != 0
 		if !isSymlink {
-			if err := os.Chmod(destPath, entry.Mode()); err != nil {
+			if err := os.Chmod(destPath, entry.Type()); err != nil {
 				return err
 			}
 		}
