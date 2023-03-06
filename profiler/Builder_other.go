@@ -9,10 +9,6 @@ import (
 	"os/exec"
 )
 
-var Profilers []Profiler
-var DefaultLocation string
-var IsForce bool
-
 func init() {
 	DefaultLocation = "$HOME/.config/netprofiles/$HOSTNAME"
 	IsForce = false

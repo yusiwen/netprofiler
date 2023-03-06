@@ -7,10 +7,6 @@ import (
 	"os"
 )
 
-var Profilers []Profiler
-var DefaultLocation string
-var IsForce bool
-
 func init() {
 	DefaultLocation = "$USERPROFILE\\.config\\netprofiles\\$COMPUTERNAME"
 	IsForce = false
